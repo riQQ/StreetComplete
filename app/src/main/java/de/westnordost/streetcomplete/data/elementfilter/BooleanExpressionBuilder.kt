@@ -50,6 +50,12 @@ class BooleanExpressionBuilder<I : Matcher<T>, T> {
 
     fun addValue(i: I) {
         node.addChild(Leaf(i))
+
+        // Not can only have a single child and it binds stronger than the other boolean operators
+        if (node is Not)
+        {
+            node = node.parent!!
+        }
     }
 
     fun addAnd() {
@@ -84,6 +90,12 @@ class BooleanExpressionBuilder<I : Matcher<T>, T> {
             anyOf.addChild(last)
             node = anyOf
         }
+    }
+
+    fun addNot() {
+        val not = Not<I, T>()
+        node.addChild(not)
+        node = not
     }
 }
 

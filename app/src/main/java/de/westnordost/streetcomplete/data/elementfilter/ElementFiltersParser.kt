@@ -46,6 +46,7 @@ fun String.toElementFilterExpression(): ElementFilterExpression {
 private const val WITH = "with"
 private const val OR = "or"
 private const val AND = "and"
+private const val NOT = "not"
 
 private const val YEARS = "years"
 private const val MONTHS = "months"
@@ -55,7 +56,7 @@ private const val DAYS = "days"
 private const val EQUALS = "="
 private const val NOT_EQUALS = "!="
 private const val LIKE = "~"
-private const val NOT = "!"
+private const val NOT_TAG = "!"
 private const val NOT_LIKE = "!~"
 private const val GREATER_THAN = ">"
 private const val LESS_THAN = "<"
@@ -138,13 +139,18 @@ private fun StringWithCursor.parseTags(): BooleanExpression<ElementFilter, Eleme
             throw ParseException("Expected a whitespace or bracket before the tag", cursorPos)
         }
 
+        if (nextIsAndAdvance(NOT)) {
+            builder.addNot()
+            continue
+        }
+
         builder.addValue(parseTag())
 
         val separated = parseBracketsAndSpaces(')', builder)
 
         if (isAtEnd()) break
 
-        // same as with the opening bracket, only that if the string is over, its okay
+        // same as with the opening bracket, only that if the string is over, it's okay
         if (!separated) {
             throw ParseException("Expected a whitespace or bracket after the tag", cursorPos)
         }
@@ -184,7 +190,7 @@ private fun StringWithCursor.parseBracketsAndSpaces(bracket: Char, expr: Boolean
 }
 
 private fun StringWithCursor.parseTag(): ElementFilter {
-    if (nextIsAndAdvance(NOT)) {
+    if (nextIsAndAdvance(NOT_TAG)) {
         if (nextIsAndAdvance(LIKE)) {
             expectAnyNumberOfSpaces()
             return NotHasKeyLike(parseKey())
