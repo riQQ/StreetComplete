@@ -2,7 +2,7 @@ package de.westnordost.streetcomplete.data.elementfilter
 
 /** Builds a boolean expression. Basically a BooleanExpression with a cursor.  */
 class BooleanExpressionBuilder<I : Matcher<T>, T> {
-    private var node: Chain<I, T> = BracketHelper()
+    private var node: OperatorWithChildren<I, T> = BracketHelper()
     private var bracketCount = 0
 
     fun build(): BooleanExpression<I, T>? {
@@ -16,18 +16,16 @@ class BooleanExpressionBuilder<I : Matcher<T>, T> {
 
         node.flatten()
 
+        val chain = node as? Chain ?: return node
+
         // flatten cannot remove itself, but we wanna do that
-        when (node.children.size) {
-            0 -> return null
-            1 -> {
-                val firstChild = node.children.first()
-                node.removeChild(firstChild)
-                return firstChild
-            }
+        val (isSimplified, simplifiedNode) = chain.simplifyChildren()
+        if (isSimplified) {
+            return simplifiedNode
         }
 
-        node.ensureNoBracketNodes()
-        return node
+        chain.ensureNoBracketNodes()
+        return chain
     }
 
     fun addOpenBracket() {
@@ -60,10 +58,8 @@ class BooleanExpressionBuilder<I : Matcher<T>, T> {
 
     fun addAnd() {
         if (node !is AllOf) {
-            val last = node.children.last()
             val allOf = AllOf<I, T>()
-            node.replaceChild(last, allOf)
-            allOf.addChild(last)
+            node.replaceLastAndAddAsChild(allOf)
             node = allOf
         }
     }
@@ -84,10 +80,8 @@ class BooleanExpressionBuilder<I : Matcher<T>, T> {
                 node = anyOf
             }
         } else if (group != null) {
-            val last = node.children.last()
             val anyOf = AnyOf<I, T>()
-            node.replaceChild(last, anyOf)
-            anyOf.addChild(last)
+            node.replaceLastAndAddAsChild(anyOf)
             node = anyOf
         }
     }
@@ -99,10 +93,11 @@ class BooleanExpressionBuilder<I : Matcher<T>, T> {
     }
 }
 
+// TODO
 private fun <I : Matcher<T>, T> Chain<I, T>.ensureNoBracketNodes() {
     if (this is BracketHelper) throw IllegalStateException("BooleanExpression still contains a Bracket node!")
 
-    val it = children.listIterator()
+    val it = children.iterator()
     while (it.hasNext()) {
         val child = it.next()
         if (child is Chain) child.ensureNoBracketNodes()

@@ -1,28 +1,48 @@
 package de.westnordost.streetcomplete.data.elementfilter
 
-abstract class BooleanExpression<I : Matcher<T>, T> {
-    var parent: Chain<I, T>? = null
-        internal set
-
-    abstract fun matches(obj: T): Boolean
+interface BooleanExpressionItf<I : Matcher<T>, T> {
+    val parent: OperatorWithChildren<I, T>?
+    fun matches(obj: T): Boolean
 }
 
-abstract class Chain<I : Matcher<T>, T> : BooleanExpression<I, T>() {
+abstract class BooleanExpression<I : Matcher<T>, T> : BooleanExpressionItf<I, T> {
+    override var parent: OperatorWithChildren<I, T>? = null
+        internal set
+
+    abstract override fun matches(obj: T): Boolean
+}
+
+abstract class OperatorWithChildren<I : Matcher<T>, T> : BooleanExpression<I, T>() {
+    abstract fun addChild(child: BooleanExpression<I, T>)
+
+    abstract fun removeChild(child: BooleanExpression<I, T>)
+
+    abstract fun replaceChild(replace: BooleanExpression<I, T>, with: BooleanExpression<I, T>)
+
+    abstract fun replaceLastAndAddAsChild(with: OperatorWithChildren<I, T>)
+
+    /** Removes unnecessary depth in the expression tree  */
+    abstract fun flatten()
+
+    abstract fun removeEmptyNodes()
+}
+
+abstract class Chain<I : Matcher<T>, T> : OperatorWithChildren<I, T>() {
     protected val nodes = ArrayList<BooleanExpression<I, T>>()
 
     val children: List<BooleanExpression<I, T>> get() = nodes.toList()
 
-    open fun addChild(child: BooleanExpression<I, T>) {
+    override fun addChild(child: BooleanExpression<I, T>) {
         child.parent = this
         nodes.add(child)
     }
 
-    fun removeChild(child: BooleanExpression<I, T>) {
+    override fun removeChild(child: BooleanExpression<I, T>) {
         nodes.remove(child)
         child.parent = null
     }
 
-    fun replaceChild(replace: BooleanExpression<I, T>, with: BooleanExpression<I, T>) {
+    override fun replaceChild(replace: BooleanExpression<I, T>, with: BooleanExpression<I, T>) {
         val it = nodes.listIterator()
         while (it.hasNext()) {
             val child = it.next()
@@ -44,19 +64,23 @@ abstract class Chain<I : Matcher<T>, T> : BooleanExpression<I, T>() {
         }
     }
 
-    /** Removes unnecessary depth in the expression tree  */
-    fun flatten() {
+    override fun flatten() {
         removeEmptyNodes()
         mergeNodesWithSameOperator()
     }
 
     /** remove nodes from superfluous brackets  */
-    private fun removeEmptyNodes() {
+    override fun removeEmptyNodes() {
         val it = nodes.listIterator()
         while (it.hasNext()) {
-            val child = it.next() as? Chain ?: continue
-            if (child.nodes.size == 1 && child !is Not<I, T>) {
-                replaceChildAt(it, child.nodes.first())
+            val next = it.next()
+            if (next is Not) {
+                next.removeEmptyNodes()
+                continue
+            }
+            val child = next as? Chain ?: continue
+            if (child.children.size == 1) {
+                replaceChildAt(it, child.children.first())
                 it.previous() // = the just replaced node will be checked again
             } else {
                 child.removeEmptyNodes()
@@ -69,9 +93,6 @@ abstract class Chain<I : Matcher<T>, T> : BooleanExpression<I, T>() {
         val it = nodes.listIterator()
         while (it.hasNext()) {
             val child = it.next() as? Chain ?: continue
-            if (child is Not<I, T>) {
-                continue;
-            }
             child.mergeNodesWithSameOperator()
 
             // merge two successive nodes of same type
@@ -79,6 +100,25 @@ abstract class Chain<I : Matcher<T>, T> : BooleanExpression<I, T>() {
                 replaceChildAt(it, *child.children.toTypedArray())
             }
         }
+    }
+
+    fun simplifyChildren() : Pair<Boolean, BooleanExpression<I, T>?> {
+        when (children.size) {
+            0 -> return Pair(true, null)
+            1 -> {
+                val firstChild = children.first()
+                removeChild(firstChild)
+                return Pair(true, firstChild)
+            }
+        }
+
+        return Pair(false, null)
+    }
+
+    override fun replaceLastAndAddAsChild(with: OperatorWithChildren<I, T>) {
+        val last = children.last()
+        replaceChild(last, with)
+        with.addChild(last)
     }
 }
 
@@ -97,22 +137,71 @@ class AnyOf<I : Matcher<T>, T> : Chain<I, T>() {
     override fun toString() = nodes.joinToString(" or ") { "$it" }
 }
 
-class Not<I : Matcher<T>, T> : Chain<I, T>() {
+class Not<I : Matcher<T>, T> : OperatorWithChildren<I, T>() {
+    internal var node : BooleanExpression<I, T>? = null
+        private set
+
+    internal var childrenIterator : Iterator<BooleanExpression<I,T>> = sequence {
+        if (node == null)
+            return@sequence
+        yield(node!!)
+    }.iterator()
+
     override fun addChild(child: BooleanExpression<I, T>) {
-        if (nodes.size > 0)
-        {
+        if (node != null) {
             throw IllegalStateException("Adding a second child to 'Not' is not allowed")
         }
-        super.addChild(child)
+
+        child.parent = this
+        node = child
     }
 
-    override fun matches(obj: T) = !nodes.first().matches(obj)
+    override fun removeChild(child: BooleanExpression<I, T>) {
+        if (node == child) {
+            node = null
+            child.parent = null
+        }
+    }
+
+    override fun replaceChild(replace: BooleanExpression<I, T>, with: BooleanExpression<I, T>) {
+        if (node === replace) {
+            node = with
+        }
+    }
+
+    override fun matches(obj: T) = node?.matches(obj) != true
+    override fun replaceLastAndAddAsChild(with: OperatorWithChildren<I, T>) {
+        val currentNode = node!!
+        node = with
+        with.addChild(currentNode)
+    }
+
+    override fun flatten() {
+        removeEmptyNodes()
+    }
+
+    override fun removeEmptyNodes() {
+        val next = node
+        if (next is Not) {
+            next.removeEmptyNodes()
+            return
+        }
+        val child = next as? Chain ?: return
+        if (child.children.size == 1) {
+            val grandchild = child.children.first()
+            node = grandchild
+            grandchild.parent = this
+            removeEmptyNodes() // = the just replaced node will be checked again
+        } else {
+            child.removeEmptyNodes()
+        }
+    }
 
     override fun toString() : String {
-        val childString = when (val firstNode = nodes.firstOrNull()) {
-            is Chain -> "($firstNode)"
+        val childString = when (node) {
+            is Chain -> "($node)"
             null -> ""
-            else -> "$firstNode"
+            else -> "$node"
         }
 
         return "not $childString"

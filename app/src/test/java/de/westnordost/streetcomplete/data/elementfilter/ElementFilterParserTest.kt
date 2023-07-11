@@ -105,7 +105,7 @@ class ElementFilterParserTest {
     }
 
     @Test
-    fun `test expression parsing with complex not withou any braces and matching tags`() {
+    fun `test expression parsing with not-vs-or precedence without any braces and matching tags`() {
         val accesibleResidentialWay = way(tags = mapOf(HIGHWAY to RESIDENTIAL, "access" to "yes"))
         val accesibleTertiaryWay = way(tags = mapOf(HIGHWAY to "tertiary", "access" to "yes"))
         val notAccesibleResidentialWay = way(tags = mapOf(HIGHWAY to RESIDENTIAL, "access" to "no"))

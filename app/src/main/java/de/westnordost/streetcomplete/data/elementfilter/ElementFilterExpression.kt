@@ -92,7 +92,7 @@ private val BooleanExpression<ElementFilter, Element>.mayEvaluateToTrueWithNoTag
         is Leaf -> value.mayEvaluateToTrueWithNoTags
         is AnyOf -> children.any { it.mayEvaluateToTrueWithNoTags }
         is AllOf -> children.all { it.mayEvaluateToTrueWithNoTags }
-        is Not -> children.first().mayEvaluateToTrueWithNoTags
+        is Not -> node?.mayEvaluateToTrueWithNoTags == false
         else -> throw IllegalStateException("Unexpected expression")
     }
 
