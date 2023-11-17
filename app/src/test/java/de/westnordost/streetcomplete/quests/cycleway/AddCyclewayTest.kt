@@ -1,17 +1,12 @@
 package de.westnordost.streetcomplete.quests.cycleway
 
-import de.westnordost.countryboundaries.CountryBoundaries
 import de.westnordost.streetcomplete.data.meta.CountryInfo
-import de.westnordost.streetcomplete.data.meta.CountryInfos
-import de.westnordost.streetcomplete.data.meta.getByLocation
 import de.westnordost.streetcomplete.quests.TestMapDataWithGeometry
 import de.westnordost.streetcomplete.testutils.mock
 import de.westnordost.streetcomplete.testutils.on
 import de.westnordost.streetcomplete.testutils.pGeom
 import de.westnordost.streetcomplete.testutils.way
 import de.westnordost.streetcomplete.util.ktx.nowAsEpochMilliseconds
-import org.mockito.ArgumentMatchers.anyDouble
-import java.util.concurrent.FutureTask
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,19 +17,11 @@ import kotlin.test.assertTrue
 class AddCyclewayTest {
 
     private lateinit var countryInfo: CountryInfo
-    private lateinit var countryInfos: CountryInfos
     private lateinit var questType: AddCycleway
 
     @BeforeTest fun setUp() {
-        val countryBoundaries: CountryBoundaries = mock()
-        val futureTask = FutureTask { countryBoundaries }
-        futureTask.run()
-
         countryInfo = mock()
-        countryInfos = mock()
-        on(countryInfos.getByLocation(countryBoundaries, anyDouble(), anyDouble())).thenReturn(countryInfo)
-
-        questType = AddCycleway(countryInfos, futureTask)
+        questType = AddCycleway { _ -> countryInfo }
     }
 
     @Test fun `applicable to road with missing cycleway`() {
@@ -180,7 +167,7 @@ class AddCyclewayTest {
     }
 
     @Test
-    fun `applicable to maxspeed 30 zone with zone_traffic urban`() {
+    fun `not applicable to maxspeed 30 zone with zone_traffic urban`() {
         val residentialWayIn30Zone = way(1L, listOf(1, 2, 3), mapOf(
             "highway" to "residential",
             "maxspeed" to "30",
@@ -190,8 +177,8 @@ class AddCyclewayTest {
 
         val mapData = TestMapDataWithGeometry(listOf(residentialWayIn30Zone))
 
-        assertEquals(1, questType.getApplicableElements(mapData).toList().size)
-        assertTrue(questType.isApplicableTo(residentialWayIn30Zone)!!)
+        assertEquals(0, questType.getApplicableElements(mapData).toList().size)
+        assertFalse(questType.isApplicableTo(residentialWayIn30Zone)!!)
     }
 
     @Test
@@ -209,7 +196,7 @@ class AddCyclewayTest {
     }
 
     @Test
-    fun `not applicable to residential way in maxspeed 30 zone`() {
+    fun `not applicable to residential road in maxspeed 30 zone`() {
         val residentialWayIn30Zone = way(1L, listOf(1, 2, 3), mapOf(
             "highway" to "residential",
             "maxspeed" to "30",
@@ -220,5 +207,19 @@ class AddCyclewayTest {
 
         assertEquals(0, questType.getApplicableElements(mapData).toList().size)
         assertFalse(questType.isApplicableTo(residentialWayIn30Zone)!!)
+    }
+
+    @Test
+    fun `not applicable to residential road with maxspeed 30`() {
+        val residentialWayWithMaxspeed30 = way(1L, listOf(1, 2, 3), mapOf(
+            "highway" to "residential",
+            "maxspeed" to "30",
+        ))
+
+        val mapData = TestMapDataWithGeometry(listOf(residentialWayWithMaxspeed30))
+
+        // a residential way with maxspeed=30 and no other maxspeed tags is assumed to be in a max-speed 30 zone
+        assertEquals(0, questType.getApplicableElements(mapData).toList().size)
+        assertFalse(questType.isApplicableTo(residentialWayWithMaxspeed30)!!)
     }
 }

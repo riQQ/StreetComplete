@@ -1,21 +1,18 @@
 package de.westnordost.streetcomplete.quests.cycleway
 
-import de.westnordost.countryboundaries.CountryBoundaries
 import de.westnordost.streetcomplete.R
 import de.westnordost.streetcomplete.data.elementfilter.filters.RelativeDate
 import de.westnordost.streetcomplete.data.elementfilter.filters.TagOlderThan
 import de.westnordost.streetcomplete.data.elementfilter.toElementFilterExpression
 import de.westnordost.streetcomplete.data.meta.CountryInfo
-import de.westnordost.streetcomplete.data.meta.CountryInfos
-import de.westnordost.streetcomplete.data.meta.getByLocation
 import de.westnordost.streetcomplete.data.osm.geometry.ElementGeometry
 import de.westnordost.streetcomplete.data.osm.mapdata.Element
+import de.westnordost.streetcomplete.data.osm.mapdata.LatLon
 import de.westnordost.streetcomplete.data.osm.mapdata.MapDataWithGeometry
 import de.westnordost.streetcomplete.data.osm.mapdata.filter
 import de.westnordost.streetcomplete.data.osm.osmquests.OsmElementQuestType
 import de.westnordost.streetcomplete.data.quest.NoCountriesExcept
 import de.westnordost.streetcomplete.data.user.achievements.EditTypeAchievement.BICYCLIST
-import de.westnordost.streetcomplete.osm.MAXSPEED_TYPE_KEYS
 import de.westnordost.streetcomplete.osm.Tags
 import de.westnordost.streetcomplete.osm.cycleway.Cycleway.UNSPECIFIED_LANE
 import de.westnordost.streetcomplete.osm.cycleway.Cycleway.UNSPECIFIED_SHARED_LANE
@@ -24,12 +21,11 @@ import de.westnordost.streetcomplete.osm.cycleway.any
 import de.westnordost.streetcomplete.osm.cycleway.applyTo
 import de.westnordost.streetcomplete.osm.cycleway.createCyclewaySides
 import de.westnordost.streetcomplete.osm.cycleway.isAmbiguous
+import de.westnordost.streetcomplete.osm.isImplicitMaxSpeedButNotSlowZone
 import de.westnordost.streetcomplete.osm.surface.ANYTHING_UNPAVED
-import java.util.concurrent.FutureTask
 
 class AddCycleway(
-    private val countryInfos: CountryInfos,
-    private val countryBoundariesFuture: FutureTask<CountryBoundaries>,
+    private val getCountryInfoByLocation: (location: LatLon) -> CountryInfo,
 ) : OsmElementQuestType<LeftAndRightCycleway> {
 
     override val changesetComment = "Specify whether there are cycleways"
@@ -55,7 +51,7 @@ class AddCycleway(
     // http://peopleforbikes.org/get-local/ (US)
     override val enabledInCountries = NoCountriesExcept(
         // all of Northern and Western Europe, most of Central Europe, some of Southern Europe
-        "NO", "SE", "FI", "IS", "DK",
+        "NO", "SE", "FI", "IS", "DK", "SI",
         "GB", "IE", "NL", "BE", "FR", "LU",
         "DE", "PL", "CZ", "HU", "AT", "CH", "LI",
         "ES", "IT", "HR",
@@ -85,12 +81,8 @@ class AddCycleway(
         val eligibleRoads = mapData.ways.filter { roadsFilter.matches(it) }
         val roadsWithMissingCycleway = eligibleRoads.filter { untaggedRoadsFilter.matches(it) }
         val oldRoadsWithKnownCycleways = eligibleRoads.filter { way ->
-            val countryInfo = mapData.getWayGeometry(way.id)?.center?.let { p ->
-                countryInfos.getByLocation(
-                    countryBoundariesFuture.get(),
-                    p.longitude,
-                    p.latitude,
-                )
+            val countryInfo = mapData.getWayGeometry(way.id)?.center?.let {
+                getCountryInfoByLocation(it)
             }
             way.hasOldInvalidOrAmbiguousCyclewayTags(countryInfo) == true
         }
@@ -107,11 +99,7 @@ class AddCycleway(
     override fun createForm() = AddCyclewayForm()
 
     override fun applyAnswerTo(answer: LeftAndRightCycleway, tags: Tags, geometry: ElementGeometry, timestampEdited: Long) {
-        val countryInfo = countryInfos.getByLocation(
-            countryBoundariesFuture.get(),
-            geometry.center.longitude,
-            geometry.center.latitude
-        )
+        val countryInfo = getCountryInfoByLocation(geometry.center)
         answer.applyTo(tags, countryInfo.isLeftHandTraffic)
     }
 }
@@ -143,7 +131,7 @@ private val roadsFilter by lazy { """
 private val untaggedRoadsFilter by lazy { """
     ways with (
         highway ~ primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified
-        or highway = residential and (maxspeed > 33 or $notInZone30OrLess)
+        or highway = residential and (maxspeed > 33 or $isImplicitMaxSpeedButNotSlowZone)
       )
       and !cycleway
       and !cycleway:left
@@ -156,16 +144,12 @@ private val untaggedRoadsFilter by lazy { """
       and (
         !maxspeed
         or maxspeed > 20
-        or $notInZone30OrLess
+        or $isImplicitMaxSpeedButNotSlowZone
       )
       and surface !~ ${ANYTHING_UNPAVED.joinToString("|")}
       and ~bicycle|bicycle:backward|bicycle:forward !~ use_sidepath
       and sidewalk != separate
 """.toElementFilterExpression() }
-
-private val notInZone30OrLess = """
-   ~"${(MAXSPEED_TYPE_KEYS + "maxspeed").joinToString("|")}" ~ ".*:(urban|rural|trunk|motorway|nsl_single|nsl_dual)"
-"""
 
 private val olderThan4Years = TagOlderThan("cycleway", RelativeDate(-(365 * 4).toFloat()))
 

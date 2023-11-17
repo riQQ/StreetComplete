@@ -5,7 +5,7 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     kotlin("android")
-    kotlin("plugin.serialization") version "1.8.21"
+    kotlin("plugin.serialization") version "1.9.10"
 }
 
 android {
@@ -34,8 +34,8 @@ android {
         applicationId = "de.westnordost.streetcomplete"
         minSdk = 21
         targetSdk = 33
-        versionCode = 5401
-        versionName = "54.0"
+        versionCode = 5500
+        versionName = "55.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -63,6 +63,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     bundle {
@@ -101,6 +102,7 @@ configurations {
     all {
         // it's already included in Android
         exclude(group = "net.sf.kxml", module = "kxml2")
+        exclude(group = "xmlpull", module = "xmlpull")
     }
 }
 
@@ -156,8 +158,8 @@ dependencies {
     // finding a name for a feature without a name tag
     implementation("de.westnordost:osmfeatures-android:5.2")
     // talking with the OSM API
-    implementation("de.westnordost:osmapi-map:2.1")
-    implementation("de.westnordost:osmapi-changesets:2.1")
+    implementation("de.westnordost:osmapi-map:2.3")
+    implementation("de.westnordost:osmapi-changesets:2.3")
     implementation("de.westnordost:osmapi-notes:2.0")
     implementation("de.westnordost:osmapi-traces:2.0")
     implementation("de.westnordost:osmapi-user:2.0")
@@ -173,17 +175,17 @@ dependencies {
     implementation("org.jbox2d:jbox2d-library:2.2.1.1")
 
     // sharing presets/settings via QR Code
-    implementation("com.google.zxing:core:3.5.0")
+    implementation("com.google.zxing:core:3.5.2")
 
     // serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-    implementation("com.charleskorn.kaml:kaml:0.48.0")
+    implementation("com.charleskorn.kaml:kaml:0.55.0")
 
     // map and location
     implementation("com.mapzen.tangram:tangram:0.17.1")
 
     // opening hours parser
-    implementation("ch.poole:OpeningHoursParser:0.27.0")
+    implementation("ch.poole:OpeningHoursParser:0.27.1")
 
     // image view that allows zoom and pan
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
@@ -192,14 +194,14 @@ dependencies {
 /** Localizations that should be pulled from POEditor */
 val bcp47ExportLanguages = setOf(
     "am", "ar", "ast", "be", "bg", "bs", "ca", "cs", "da", "de", "el",
-    "en", "en-AU", "en-GB", "eo", "es", "eu", "fa", "fi", "fr", "gl", "hr", "hu", "hy",
+    "en", "en-AU", "en-GB", "eo", "es", "eu", "fa", "fi", "fr", "gl", "he", "hr", "hu", "hy",
     "id", "it", "ja", "ko", "lt", "lv", "nb", "no", "nl", "nn", "pl", "pt", "pt-BR",
-    "ro", "ru", "sk", "sr-cyrl", "sr-latn", "sv", "sw", "th", "tr", "uk",
+    "ro", "ru", "sk", "sl", "sr-cyrl", "sr-latn", "sv", "sw", "th", "tr", "uk",
     "zh", "zh-CN", "zh-HK", "zh-TW"
 )
 
 // see https://github.com/osmlab/name-suggestion-index/tags for latest version
-val nsiVersion = "v6.0.20230825"
+val nsiVersion = "v6.0.20230925"
 // see https://github.com/openstreetmap/id-tagging-schema/releases for latest version
 val presetsVersion = "v6.4.1"
 
@@ -261,6 +263,8 @@ tasks.register<UpdateAppTranslationsTask>("updateTranslations") {
 
 tasks.register<UpdateAppTranslationCompletenessTask>("updateTranslationCompleteness") {
     group = "streetcomplete"
+    languageCodes = bcp47ExportLanguages
+    mustIncludeLanguagePercentage = 90
     apiToken = properties["POEditorAPIToken"] as String
     projectId = poEditorProjectId
     targetFiles = { "$projectDir/src/main/res/values-$it/translation_info.xml" }

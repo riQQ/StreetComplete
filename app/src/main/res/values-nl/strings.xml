@@ -728,7 +728,6 @@ Let op dat deze app pas naar het huisnummer van een gebouw vraagt nadat het gebo
     <string name="resurvey_intervals_less_often">"Vraag minder vaak"</string>
     <string name="resurvey_intervals_default">"Standaard"</string>
     <string name="resurvey_intervals_more_often">"Vraag vaker"</string>
-    <string name="quest_is_defibrillator_inside_title">"Is deze defibrilator (AED) binnen een gebouw?"</string>
     <string name="about_title_translate">"Help deze app te vertalen"</string>
     <string name="about_description_translate">"%1$s is %2$d%% vertaald"</string>
     <string name="quest_oneway2_title">"Is hier eenrichtingsverkeer? In welke richting?"</string>
@@ -1216,7 +1215,6 @@ Helaas mogen er vanwege een Google Play Store-beleid geen links naar donaties in
     <string name="quest_address_street_hint2">"Tik op een straat om deze te selecteren"</string>
     <string name="quest_bicycle_incline_title">"In welke richting gaat het hier naar boven?"</string>
     <string name="quest_bicycle_incline_up_and_down">"Het gaat op en neer"</string>
-    <string name="quest_drinking_water_type_title">"Hoe wordt hier drinkwater aangeboden?"</string>
     <string name="quest_drinking_water_type_generic_water_fountain">"Ander soort drinkfontein"</string>
     <string name="quest_drinking_water_type_jet_water_fountain">"Drinkfontein die een straaltje water geeft"</string>
     <string name="quest_drinking_water_type_bottle_refill_only_fountain">"Alleen flesjes bijvullen"</string>
@@ -1303,7 +1301,7 @@ Nu verplaatsen?"</string>
     <string name="quest_wheelchairAccessPat_noToilet">"Er is hier geen toilet"</string>
     <string name="unknown_surface_title">"Ander soort oppervlakte"</string>
     <string name="overlay_surface">"Oppervlakten"</string>
-    <string name="overlay_path_surface_segregated">"Split in fiets- en wandelgedeelte"</string>
+    <string name="overlay_path_surface_segregated">"Het pad heeft gescheiden delen voor fietsers en voetgangers"</string>
     <string name="quest_crossing_title2">"Is hier een oversteekplaats?"</string>
     <string name="quest_crossing_yes">"Ja (de stoeprand is verlaagd, er zijn markeringen, etc.)"</string>
     <string name="quest_crossing_no">"Nee, maar oversteken is mogelijk"</string>
@@ -1331,8 +1329,10 @@ Nu verplaatsen?"</string>
 
 De gegevens worden in verschillende kleuren weergegeven om je een goed overzicht te geven van wat er tot nu toe is geregistreerd.
 Ontbrekende gegevens worden altijd in rood weergegeven."</string>
-    <string name="overlays_tutorial_edit">"Tik op elke opgelichte gegeven om het te bewerken. Je kunt ook wegdelen splitsen of notities noteren, zoals bij quests.
+    <string name="overlays_tutorial_edit">"Tik op elk gekleurd element om het te bewerken. Je kunt ook wegdelen splitsen of notities noteren, zoals bij quests.
 
 Bovendien kun je met sommige overlays nieuwe gegevens toevoegen op de positie van het weergegeven plusje, zoals met de adressen overlay."</string>
     <string name="quest_crossing_kerb_height_title">"Wat is de hoogte van de stoepranden op deze kruising?"</string>
+    <string name="quest_maxheight_sign_title">"Welke hoogtebeperking staat hier vermeld?"</string>
+    <string name="quest_maxheight_sign_below_bridge_title">"Welke hoogtebeperking staat er op de brug vermeld?"</string>
 </resources>
