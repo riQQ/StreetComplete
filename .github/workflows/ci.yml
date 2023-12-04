@@ -14,4 +14,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - name: Build with Gradle
-        run: ./gradlew testDebugUnitTest lintDebug
+        run: ./gradlew assembleDebug
+      - name: Run tests
+        run: ./gradlew testDebugUnitTest
+      - name: Run lint
+        run: ./gradlew lintDebug
